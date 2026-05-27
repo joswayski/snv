@@ -1,7 +1,9 @@
 use std::{
+    ffi::OsStr,
     fmt::format,
     fs::{self, File},
     io::{self, BufRead},
+    os::unix::ffi::OsStrExt,
 };
 
 use sjl::{Logger, LoggerOptions, json};
@@ -34,6 +36,18 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
         match line {
             Ok(line) => {
                 logger.info(format!("{line}"), ());
+
+                let Some((key, value)) = line.split_once("=") else {
+                    continue;
+                };
+
+                let normalized_key = key.trim();
+                let normalized_value = value.trim();
+
+                let x = std::env::set_var(
+                    OsStr::from_bytes(normalized_key.as_bytes()),
+                    OsStr::from_bytes(normalized_value.as_bytes()),
+                );
             }
             Err(err) => {
                 logger.error(
