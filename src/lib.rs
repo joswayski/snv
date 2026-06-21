@@ -9,6 +9,37 @@ pub enum SnvErrors {
     FileLoadError,
 }
 
+fn unescape_chars(value: &str) -> String {
+    let mut output = String::new();
+    let mut chars = value.chars();
+
+    while let Some(char) = chars.next() {
+        // If it's a normal character, continue
+        if char != '\\' {
+            output.push(char);
+            continue;
+        }
+
+        // Check the next character
+        match chars.next() {
+            Some('n') => output.push('\n'),
+            Some('t') => output.push('\t'),
+            Some('r') => output.push('\r'),
+            Some('"') => output.push('"'),
+            Some('\\') => output.push('\\'),
+            Some(other_value) => {
+                // Unhandled case, push as is
+                output.push('\\');
+                output.push(other_value)
+            }
+            // end
+            None => output.push('\\'),
+        }
+    }
+
+    output
+}
+
 pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
     let file_name = file_name.unwrap_or(".env");
 
@@ -50,14 +81,11 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
 
                 // Remove wrapper quotes
                 if let Some(stripped_value) = normalized_value
-                    .strip_prefix('"')
-                    .and_then(|v| v.strip_suffix('"'))
+                    .strip_prefix("\"")
+                    .and_then(|v| v.strip_suffix("\""))
                 {
                     // If double quoted, remove some escape strings
-                    normalized_value = stripped_value
-                        .replace("\\n", "\n")
-                        .replace("\\t", "\t")
-                        .replace("\\r", "\r")
+                    normalized_value = unescape_chars(stripped_value)
                 }
 
                 if let Some(stripped_value) = normalized_value
