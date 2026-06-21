@@ -5,26 +5,20 @@ use std::{
     os::unix::ffi::OsStrExt,
 };
 
-use sjl::{LogLevel::Info, Logger, json};
-
 pub enum SnvErrors {
     FileLoadError,
 }
 
 pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
-    let logger = Logger::new();
     let file_name = file_name.unwrap_or(".env");
 
     let file = match File::open(file_name) {
         Ok(file) => {
-            logger.info(format!("Found your {file_name} file!"), ());
+            println!("Found your {file_name} file!"); // ! TODO remove
             file
         }
         Err(e) => {
-            logger.error(
-                format!("An error ocurred loading your {file_name} file!"),
-                json!({"error": e.to_string(), "file_name": file_name}),
-            );
+            println!("An error ocurred loading your {file_name} file! Error: {e}");
             return Err(SnvErrors::FileLoadError);
         }
     };
@@ -41,31 +35,39 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
 
                 let Some((key, value)) = line.split_once("=") else {
                     // Warn that we couldn't parse
-                    logger.warn(
-                        format!("Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'", index + 1, line), ()
+                    println!(
+                        "Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'",
+                        index + 1,
+                        line
                     );
+
                     continue;
                 };
 
                 let normalized_key = key.trim();
-                let mut normalized_value = value.trim();
+                let value = value.trim();
+                let mut normalized_value = value.to_string();
 
                 // Remove wrapper quotes
                 if let Some(stripped_value) = normalized_value
                     .strip_prefix('"')
                     .and_then(|v| v.strip_suffix('"'))
                 {
+                    // If double quoted, remove some escape strings
                     normalized_value = stripped_value
+                        .replace("\\n", "\n")
+                        .replace("\\t", "\t")
+                        .replace("\\r", "\r")
                 }
 
                 if let Some(stripped_value) = normalized_value
-                    .strip_prefix("'")
-                    .and_then(|v| v.strip_suffix("'"))
+                    .strip_prefix('\'')
+                    .and_then(|v| v.strip_suffix('\''))
                 {
-                    normalized_value = stripped_value
+                    normalized_value = stripped_value.to_string();
                 }
 
-                logger.info("ENV LINE", json!({normalized_key: normalized_value}));
+                println!("{normalized_key}={normalized_value}");
                 unsafe {
                     std::env::set_var(
                         OsStr::from_bytes(normalized_key.as_bytes()),
@@ -74,10 +76,7 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
                 }
             }
             Err(err) => {
-                logger.error(
-                    format!("An error ocurred reading line {}", index),
-                    json!({"error": err.to_string()}),
-                );
+                println!("An error ocurred reading line {index}. Error: {err}");
 
                 continue;
             }
