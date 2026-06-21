@@ -48,6 +48,8 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
                 if let Some(stripped_value) = normalized_value
                     .strip_prefix('"')
                     .and_then(|v| v.strip_suffix('"'))
+                    .and_then(|v| v.strip_prefix("'"))
+                    .and_then(|v| v.strip_suffix("'"))
                 {
                     normalized_value = stripped_value
                 }
