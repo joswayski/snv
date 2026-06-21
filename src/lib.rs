@@ -1,12 +1,11 @@
 use std::{
     ffi::OsStr,
-    fmt::format,
-    fs::{self, File},
+    fs::File,
     io::{self, BufRead},
     os::unix::ffi::OsStrExt,
 };
 
-use sjl::{Logger, LoggerOptions, json};
+use sjl::{Logger, json};
 
 pub enum SnvErrors {
     FileLoadError,
@@ -38,16 +37,21 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
                 logger.info(format!("{line}"), ());
 
                 let Some((key, value)) = line.split_once("=") else {
+                    logger.warn(
+                        format!("Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'", index + 1, line), ()
+                    );
                     continue;
                 };
 
                 let normalized_key = key.trim();
                 let normalized_value = value.trim();
 
-                let x = std::env::set_var(
-                    OsStr::from_bytes(normalized_key.as_bytes()),
-                    OsStr::from_bytes(normalized_value.as_bytes()),
-                );
+                unsafe {
+                    std::env::set_var(
+                        OsStr::from_bytes(normalized_key.as_bytes()),
+                        OsStr::from_bytes(normalized_value.as_bytes()),
+                    );
+                };
             }
             Err(err) => {
                 logger.error(
