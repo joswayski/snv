@@ -26,6 +26,7 @@ fn unescape_chars(value: &str) -> String {
             Some('t') => output.push('\t'),
             Some('r') => output.push('\r'),
             Some('"') => output.push('"'),
+            Some('\'') => output.push('\''),
             Some('\\') => output.push('\\'),
             Some(other_value) => {
                 // Unhandled case, push as is
@@ -112,4 +113,95 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unescape_chars_newline() {
+        let input = r#"hello\nworld"#;
+        let expected_output = "hello\nworld";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_tab() {
+        let input = r#"hello\tworld"#;
+        let expected_output = "hello\tworld";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_return() {
+        let input = r#"hello\rworld"#;
+        let expected_output = "hello\rworld";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_double_quote() {
+        let input = r#"hello\"world"#;
+        let expected_output = "hello\"world";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_single_quote() {
+        let input = r#"hello\'world"#;
+        let expected_output = "hello'world";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_backslash() {
+        let input = r#"hello\\world"#;
+        let expected_output = "hello\\world";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_no_escape_chars() {
+        let input = "hello world";
+        let expected_output = "hello world";
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_trailing_backslash() {
+        let input = r#"hello world\"#;
+        let expected_output = r#"hello world\"#;
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescape_chars_unknown_left_as_is() {
+        let input = r#"hello\-world"#;
+        let expected_output = r#"hello\-world"#;
+
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescaped_chars_no_newline_on_backslash() {
+        let input = r#"c:\\new-folder"#;
+        let expected_output = r#"c:\new-folder"#;
+        assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_unescaped_chars_multiple_escapes() {
+        let input = r#"hello\nworld\"jose here\""#;
+        let expected_output = "hello\nworld\"jose here\"";
+        assert_eq!(unescape_chars(input), expected_output);
+    }
 }
