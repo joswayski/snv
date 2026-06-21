@@ -34,7 +34,13 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
     for (index, line) in reader.lines().enumerate() {
         match line {
             Ok(line) => {
+                if line.len() == 0 {
+                    // Skip empty lines
+                    continue;
+                }
+
                 let Some((key, value)) = line.split_once("=") else {
+                    // Warn that we couldn't parse
                     logger.warn(
                         format!("Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'", index + 1, line), ()
                     );
@@ -48,7 +54,12 @@ pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
                 if let Some(stripped_value) = normalized_value
                     .strip_prefix('"')
                     .and_then(|v| v.strip_suffix('"'))
-                    .and_then(|v| v.strip_prefix("'"))
+                {
+                    normalized_value = stripped_value
+                }
+
+                if let Some(stripped_value) = normalized_value
+                    .strip_prefix("'")
                     .and_then(|v| v.strip_suffix("'"))
                 {
                     normalized_value = stripped_value
