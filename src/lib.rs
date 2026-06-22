@@ -3,10 +3,6 @@ use std::{
     io::{self, BufRead},
 };
 
-pub enum SnvErrors {
-    FileLoadError,
-}
-
 fn unescape_chars(value: &str) -> String {
     let mut output = String::new();
     let mut chars = value.chars();
