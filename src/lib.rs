@@ -2,8 +2,6 @@ use std::{
     ffi::OsStr,
     fs::File,
     io::{self, BufRead},
-    os::unix::ffi::OsStrExt,
-    path::Path,
 };
 
 pub enum SnvErrors {
@@ -49,28 +47,19 @@ pub fn load() -> Result<(), std::io::Error> {
 pub fn load_from(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::Error> {
     let file_path = file_path.as_ref();
 
-    let file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(e) => {
-            println!(
-                "An error ocurred loading your file at: '{}'\nError: {e}",
-                file_path.display()
-            );
-            return Err(e);
-        }
-    };
+    let file = File::open(file_path)?;
 
     let reader = io::BufReader::new(file);
 
     for (index, line) in reader.lines().enumerate() {
         match line {
             Ok(line) => {
-                if line.len() == 0 {
+                if line.trim().is_empty() {
                     // Skip empty lines
                     continue;
                 }
 
-                let Some((key, value)) = line.split_once("=") else {
+                let Some((key, value)) = line.split_once('=') else {
                     // Warn that we couldn't parse
                     println!(
                         "Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'",
@@ -92,9 +81,7 @@ pub fn load_from(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::
                 {
                     // If double quoted, remove some escape strings
                     normalized_value = unescape_chars(stripped_value)
-                }
-
-                if let Some(stripped_value) = normalized_value
+                } else if let Some(stripped_value) = normalized_value
                     .strip_prefix('\'')
                     .and_then(|v| v.strip_suffix('\''))
                 {
@@ -102,14 +89,11 @@ pub fn load_from(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::
                 }
 
                 unsafe {
-                    std::env::set_var(
-                        OsStr::from_bytes(normalized_key.as_bytes()),
-                        OsStr::from_bytes(normalized_value.as_bytes()),
-                    );
+                    std::env::set_var(normalized_key, normalized_value);
                 }
             }
             Err(err) => {
-                println!("An error ocurred reading line {index}. Error: {err}");
+                println!("An error occurred reading line {index}. Error: {err}");
 
                 continue;
             }

@@ -48,6 +48,3 @@ use_self = "allow"
 multiple_crate_versions = "allow"
 unnecessary_semicolon = "allow"
 inconsistent_struct_constructor = "allow"
-
-[dependencies]
-sjl = "0.7.0"
