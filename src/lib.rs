@@ -311,4 +311,16 @@ mod tests {
         let input = r#"             #"#;
         assert_eq!(parse_line(0, input), None)
     }
+
+    #[test]
+    fn test_parse_line_keeps_equals_after_split() {
+        let input = r#"DATABASE_URL=postgres://host/db?sslmode=require"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some((
+                "DATABASE_URL".into(),
+                "postgres://host/db?sslmode=require".into()
+            ))
+        )
+    }
 }
