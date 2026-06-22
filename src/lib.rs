@@ -41,17 +41,16 @@ fn unescape_chars(value: &str) -> String {
     output
 }
 
-pub fn load(file_name: Option<&str>) -> Result<(), SnvErrors> {
-    let file_name = file_name.unwrap_or(".env");
-
-    let file = match File::open(file_name) {
-        Ok(file) => {
-            println!("Found your {file_name} file!"); // ! TODO remove
-            file
-        }
+pub fn load(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::Error> {
+    let file_path = file_path.as_ref();
+    let file = match File::open(file_path) {
+        Ok(file) => file,
         Err(e) => {
-            println!("An error ocurred loading your {file_name} file! Error: {e}");
-            return Err(SnvErrors::FileLoadError);
+            println!(
+                "An error ocurred loading your file at: '{}'\nError: {e}",
+                file_path.display()
+            );
+            return Err(e);
         }
     };
 
