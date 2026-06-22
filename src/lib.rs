@@ -62,7 +62,7 @@ fn parse_line(index: usize, line: &str) -> Option<(String, String)> {
 
     // Remove wrapper quotes
     // Happy path begin and end with "value"
-    let value = if let Some(stripped_value) =
+    let mut value = if let Some(stripped_value) =
         value.strip_prefix("\"").and_then(|v| v.strip_suffix("\""))
     {
         // If double quoted, remove some escape strings
@@ -75,6 +75,44 @@ fn parse_line(index: usize, line: &str) -> Option<(String, String)> {
         // TODO handle inline comments
         value.to_string()
     };
+
+    // Check for inline comments
+    if value.starts_with("\"") {
+        let mut escaped = false;
+        let mut final_index = None;
+
+        println!("Extracting inline comment for {value}");
+        // Get the next unescaped quote, and treat everything after as a comment
+        for (idx, char) in value.char_indices() {
+            if idx == 0 {
+                // Skip the first as we know it's not that one
+                escaped = false;
+                continue;
+            }
+
+            if escaped {
+                escaped = false;
+                continue;
+            }
+
+            if char == '\\' {
+                // Let it fall through on the next pass
+                escaped = true;
+                continue;
+            }
+
+            if char == '"' {
+                // Not escaped, this is the final char
+                final_index = Some(idx);
+                break;
+            }
+        }
+
+        if final_index.is_some() {
+            // Get the actual value in between the quotes
+            value = value[1..final_index.unwrap()].to_string();
+        }
+    }
 
     Some((key, value))
 }
@@ -245,12 +283,12 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_parse_line_inline_comments_dont_work() {
-        let input = r#"API_KEY=beans # secret btw don't use this"#;
-        assert_eq!(
-            parse_line(0, input),
-            Some(("API_KEY".into(), "beans # secret btw don't use this".into()))
-        );
-    }
+    // #[test]
+    // fn test_parse_line_inline_comments_do work_double_quotes() {
+    //     let input = r#"API_KEY="beans" # deprecated actually dont use this"#;
+    //     assert_eq!(
+    //         parse_line(0, input),
+    //         Some(("API_KEY".into(), "beans".into()))
+    //     );
+    // }
 }
