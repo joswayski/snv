@@ -305,4 +305,10 @@ mod tests {
             Some(("API_KEY".into(), "beans".into()))
         );
     }
+
+    #[test]
+    fn test_parse_line_with_whitespace_leading_comment() {
+        let input = r#"             #"#;
+        assert_eq!(parse_line(0, input), None)
+    }
 }
