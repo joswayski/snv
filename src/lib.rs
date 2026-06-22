@@ -330,4 +330,23 @@ mod tests {
         let expected_output = ("API_KEY".into(), "hello \"world\"".into());
         assert_eq!(parse_line(0, input), Some(expected_output))
     }
+
+    #[test]
+    fn test_parse_double_quotes_keeps_newlines() {
+        let input = r#"PATH="c:\new-folder""#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("PATH".into(), "c:\new-folder".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_single_quote_exact() {
+        let input = r#"API_KEY='hello\n\""world"'"#;
+        let expected_output_value = r#"hello\n\""world""#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), expected_output_value.into()))
+        )
+    }
 }
