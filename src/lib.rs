@@ -63,6 +63,21 @@ fn parse_line(index: usize, line: &str) -> Option<(String, String)> {
     Some((normalized_key, normalized_value))
 }
 
+fn strip_unquoted_inline_comment(value: &str) -> &str {
+    let mut previous_char_was_whitespace = false;
+
+    for (idx, ch) in value.char_indices() {
+        if ch == '#' && previous_char_was_whitespace {
+            // We hit a comment
+            return value[..idx].trim_end();
+        }
+
+        previous_char_was_whitespace = ch.is_whitespace();
+    }
+
+    value
+}
+
 fn strip_wrapped_value(value: &str, wrapper: char, allow_escapes: bool) -> Option<&str> {
     if !value.starts_with(wrapper) {
         return None;
@@ -105,13 +120,12 @@ fn normalize_value(value: &str) -> String {
 
     if let Some(stripped_value) = strip_wrapped_value(value, '"', true) {
         return unescape_chars(stripped_value);
-    };
-
-    if let Some(stripped_value) = strip_wrapped_value(value, '\'', false) {
+    } else if let Some(stripped_value) = strip_wrapped_value(value, '\'', false) {
         return stripped_value.to_string();
-    };
-
-    value.to_string()
+    } else {
+        // Non quoted variable, remove the comment
+        strip_unquoted_inline_comment(value).to_string()
+    }
 }
 
 pub fn load() -> Result<(), std::io::Error> {
@@ -347,6 +361,33 @@ mod tests {
         assert_eq!(
             parse_line(0, input),
             Some(("API_KEY".into(), expected_output_value.into()))
+        )
+    }
+
+    #[test]
+    fn test_parse_unquoted_happy_path() {
+        let input = r#"API_KEY=hello world"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "hello world".into()))
+        )
+    }
+
+    #[test]
+    fn test_parse_unquoted_with_comment_happy_path() {
+        let input = r#"API_KEY=hello world # this is a comment"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "hello world".into()))
+        )
+    }
+
+    #[test]
+    fn test_parse_unquoted_with_no_comment_use_raw_text() {
+        let input = r#"DOCS_URL=example.com#section"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("DOCS_URL".into(), "example.com#section".into()))
         )
     }
 }

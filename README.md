@@ -35,7 +35,6 @@ fn main() {
 ```
 
 ### Documentation
-- `load()` loads `.env` from the current working directory
-- `load_from()` takes relative or absolute paths
-- Double quotes are unescaped for `\n`, `\t`, `\r`, `\'`, `\\`
+- Double quotes are esscaped for `\n`, `\t`, `\r`, `\'`, `\\`
+- Empty lines and comments are skipped
 - Single quotes are stripped but unescaped
