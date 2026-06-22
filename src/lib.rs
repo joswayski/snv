@@ -66,10 +66,8 @@ fn strip_unquoted_inline_comment(value: &str) -> &str {
         if ch == '#' && previous_char_was_whitespace {
             // We hit a comment
             if let Some(value) = value.get(..idx) {
-                value.trim_end()
-            } else {
-                value
-            };
+                return value.trim_end();
+            }
         }
 
         previous_char_was_whitespace = ch.is_whitespace();
