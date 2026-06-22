@@ -1,7 +1,8 @@
 use snv;
 
 fn main() {
-    let _ = snv::load(None);
+    let _ = snv::load_from(".env.sample");
 
-    println!("{:?}", std::env::vars())
+    let api_key = std::env::var("API_KEY").unwrap();
+    println!("KEY: {}", api_key)
 }

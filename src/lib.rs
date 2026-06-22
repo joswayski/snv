@@ -3,6 +3,7 @@ use std::{
     fs::File,
     io::{self, BufRead},
     os::unix::ffi::OsStrExt,
+    path::Path,
 };
 
 pub enum SnvErrors {
@@ -41,8 +42,13 @@ fn unescape_chars(value: &str) -> String {
     output
 }
 
-pub fn load(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::Error> {
+pub fn load() -> Result<(), std::io::Error> {
+    load_from(".env")
+}
+
+pub fn load_from(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::Error> {
     let file_path = file_path.as_ref();
+
     let file = match File::open(file_path) {
         Ok(file) => file,
         Err(e) => {
@@ -95,7 +101,6 @@ pub fn load(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::Error
                     normalized_value = stripped_value.to_string();
                 }
 
-                println!("{normalized_key}={normalized_value}");
                 unsafe {
                     std::env::set_var(
                         OsStr::from_bytes(normalized_key.as_bytes()),
