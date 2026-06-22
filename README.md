@@ -34,7 +34,7 @@ fn main() {
 
 ```
 
-### Documentation
-- Double quotes escaped `\n`, `\t`, `\r`, `\'`, `\\`
+### Behavior
+- Double quotes unescape `\n`, `\t`, `\r`, `\'`, and `\\`
+- Single quotes are kept literal
 - Empty lines and comments are skipped
-- Single quotes are unescaped and use the raw values

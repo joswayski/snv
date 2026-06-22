@@ -69,7 +69,11 @@ fn strip_unquoted_inline_comment(value: &str) -> &str {
     for (idx, ch) in value.char_indices() {
         if ch == '#' && previous_char_was_whitespace {
             // We hit a comment
-            return value[..idx].trim_end();
+            if let Some(value) = value.get(..idx) {
+                value.trim_end()
+            } else {
+                value
+            };
         }
 
         previous_char_was_whitespace = ch.is_whitespace();
@@ -110,7 +114,7 @@ fn strip_wrapped_value(value: &str, wrapper: char, allow_escapes: bool) -> Optio
 
     if final_index.is_some() {
         // Get the actual value in between the quotes
-        return Some(&value[1..final_index.unwrap()]);
+        return value.get(1..final_index.unwrap());
     }
 
     return None;
@@ -119,9 +123,9 @@ fn normalize_value(value: &str) -> String {
     let value = value.trim();
 
     if let Some(stripped_value) = strip_wrapped_value(value, '"', true) {
-        return unescape_chars(stripped_value);
+        unescape_chars(stripped_value)
     } else if let Some(stripped_value) = strip_wrapped_value(value, '\'', false) {
-        return stripped_value.to_string();
+        stripped_value.to_string()
     } else {
         // Non quoted variable, remove the comment
         strip_unquoted_inline_comment(value).to_string()
