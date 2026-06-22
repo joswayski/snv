@@ -323,4 +323,11 @@ mod tests {
             ))
         )
     }
+
+    #[test]
+    fn test_parse_double_quotes_with_escaped_quotes() {
+        let input = r#"API_KEY="hello \"world\"""#;
+        let expected_output = ("API_KEY".into(), "hello \"world\"".into());
+        assert_eq!(parse_line(0, input), Some(expected_output))
+    }
 }
