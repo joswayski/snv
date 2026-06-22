@@ -2,6 +2,8 @@
 
 This loads your .env files when developing. It's simple to use. Not much to it!
 
+📦 **[crates.io](https://crates.io/crates/snv)** | 📚 **[docs.rs](https://docs.rs/snv)**
+
 
 ### Installation
 ```bash
