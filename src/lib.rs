@@ -40,6 +40,45 @@ fn unescape_chars(value: &str) -> String {
     output
 }
 
+fn parse_line(index: usize, line: &str) -> Option<(String, String)> {
+    if line.trim().is_empty() || line.starts_with("#") {
+        // Skip empty lines
+        return None;
+    }
+
+    let Some((key, value)) = line.split_once('=') else {
+        // Warn that we couldn't parse
+        println!(
+            "Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'",
+            index + 1,
+            line
+        );
+
+        return None;
+    };
+
+    let key = key.trim().to_string();
+    let value = value.trim();
+
+    // Remove wrapper quotes
+    // Happy path begin and end with "value"
+    let value = if let Some(stripped_value) =
+        value.strip_prefix("\"").and_then(|v| v.strip_suffix("\""))
+    {
+        // If double quoted, remove some escape strings
+        unescape_chars(stripped_value)
+        // Happy path begin and end with 'value'
+    } else if let Some(stripped_value) = value.strip_prefix('\'').and_then(|v| v.strip_suffix('\''))
+    {
+        stripped_value.to_string()
+    } else {
+        // TODO handle inline comments
+        value.to_string()
+    };
+
+    Some((key, value))
+}
+
 pub fn load() -> Result<(), std::io::Error> {
     load_from(".env")
 }
@@ -54,43 +93,11 @@ pub fn load_from(file_path: impl AsRef<std::path::Path>) -> Result<(), std::io::
     for (index, line) in reader.lines().enumerate() {
         match line {
             Ok(line) => {
-                if line.trim().is_empty() {
-                    // Skip empty lines
-                    continue;
-                }
-
-                let Some((key, value)) = line.split_once('=') else {
-                    // Warn that we couldn't parse
-                    println!(
-                        "Unable to parse line number {} with value: '{}'. Did not find a '=' delimiter, make sure you include it like 'key=value'",
-                        index + 1,
-                        line
-                    );
-
-                    continue;
+                if let Some((k, v)) = parse_line(index, &line) {
+                    unsafe {
+                        std::env::set_var(k, v);
+                    }
                 };
-
-                let normalized_key = key.trim();
-                let value = value.trim();
-                let mut normalized_value = value.to_string();
-
-                // Remove wrapper quotes
-                if let Some(stripped_value) = normalized_value
-                    .strip_prefix("\"")
-                    .and_then(|v| v.strip_suffix("\""))
-                {
-                    // If double quoted, remove some escape strings
-                    normalized_value = unescape_chars(stripped_value)
-                } else if let Some(stripped_value) = normalized_value
-                    .strip_prefix('\'')
-                    .and_then(|v| v.strip_suffix('\''))
-                {
-                    normalized_value = stripped_value.to_string();
-                }
-
-                unsafe {
-                    std::env::set_var(normalized_key, normalized_value);
-                }
             }
             Err(err) => {
                 println!("An error occurred reading line {index}. Error: {err}");
@@ -191,5 +198,59 @@ mod tests {
         let input = r#"hello\nworld\"jose here\""#;
         let expected_output = "hello\nworld\"jose here\"";
         assert_eq!(unescape_chars(input), expected_output);
+    }
+
+    #[test]
+    fn test_parse_line_return_none_if_empty() {
+        let input = "";
+        assert_eq!(parse_line(0, input), None);
+    }
+
+    #[test]
+    fn test_parse_line_return_none_starts_with_comment() {
+        let input = "# how are you";
+        assert_eq!(parse_line(0, input), None);
+    }
+
+    #[test]
+    fn test_parse_line_return_none_if_no_delimitter() {
+        let input = "API_KEYisEMPTY";
+        assert_eq!(parse_line(0, input), None);
+    }
+
+    #[test]
+    fn test_parse_line_happy_path_double_quotes() {
+        let input = r#"API_KEY="beans""#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_line_happy_path_single_quotes() {
+        let input = r#"API_KEY='beans'"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_line_happy_path_unquoted() {
+        let input = r#"API_KEY=beans and guac"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans and guac".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_line_inline_comments_dont_work() {
+        let input = r#"API_KEY=beans # secret btw don't use this"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans # secret btw don't use this".into()))
+        );
     }
 }
