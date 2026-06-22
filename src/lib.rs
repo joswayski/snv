@@ -40,6 +40,7 @@ fn unescape_chars(value: &str) -> String {
 }
 
 fn parse_line(index: usize, line: &str) -> Option<(String, String)> {
+    let line = line.trim();
     if line.trim().is_empty() || line.starts_with("#") {
         // Skip empty lines
         return None;
