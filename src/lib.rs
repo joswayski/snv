@@ -1,5 +1,4 @@
 use std::{
-    ffi::OsStr,
     fs::File,
     io::{self, BufRead},
 };
@@ -57,64 +56,61 @@ fn parse_line(index: usize, line: &str) -> Option<(String, String)> {
         return None;
     };
 
-    let key = key.trim().to_string();
-    let value = value.trim();
+    let normalized_key = key.trim().to_string();
+    let normalized_value = normalize_value(value.trim());
 
-    // Remove wrapper quotes
-    // Happy path begin and end with "value"
-    let mut value = if let Some(stripped_value) =
-        value.strip_prefix("\"").and_then(|v| v.strip_suffix("\""))
-    {
-        // If double quoted, remove some escape strings
-        unescape_chars(stripped_value)
-        // Happy path begin and end with 'value'
-    } else if let Some(stripped_value) = value.strip_prefix('\'').and_then(|v| v.strip_suffix('\''))
-    {
-        stripped_value.to_string()
-    } else {
-        // TODO handle inline comments
-        value.to_string()
-    };
+    Some((normalized_key, normalized_value))
+}
 
+fn strip_wrapped_value(value: &str, wrapper: char, allow_escapes: bool) -> Option<&str> {
+    if !value.starts_with(wrapper) {
+        return None;
+    }
     // Check for inline comments
-    if value.starts_with("\"") {
-        let mut escaped = false;
-        let mut final_index = None;
+    let mut escaped = false;
+    let mut final_index = None;
 
-        println!("Extracting inline comment for {value}");
-        // Get the next unescaped quote, and treat everything after as a comment
-        for (idx, char) in value.char_indices() {
-            if idx == 0 {
-                // Skip the first as we know it's not that one
-                escaped = false;
-                continue;
-            }
+    // Get the next unescaped quote, and treat everything after as a comment
+    // Skip the first as we know it's not that one
 
-            if escaped {
-                escaped = false;
-                continue;
-            }
-
-            if char == '\\' {
-                // Let it fall through on the next pass
-                escaped = true;
-                continue;
-            }
-
-            if char == '"' {
-                // Not escaped, this is the final char
-                final_index = Some(idx);
-                break;
-            }
+    for (idx, char) in value.char_indices().skip(1) {
+        if allow_escapes && escaped {
+            escaped = false;
+            continue;
         }
 
-        if final_index.is_some() {
-            // Get the actual value in between the quotes
-            value = value[1..final_index.unwrap()].to_string();
+        if allow_escapes && char == '\\' {
+            // Let it fall through on the next pass
+            escaped = true;
+            continue;
+        }
+
+        if char == wrapper {
+            // Not escaped, this is the final char
+            final_index = Some(idx);
+            break;
         }
     }
 
-    Some((key, value))
+    if final_index.is_some() {
+        // Get the actual value in between the quotes
+        return Some(&value[1..final_index.unwrap()]);
+    }
+
+    return None;
+}
+fn normalize_value(value: &str) -> String {
+    let value = value.trim();
+
+    if let Some(stripped_value) = strip_wrapped_value(value, '"', true) {
+        unescape_chars(stripped_value);
+    };
+
+    if let Some(stripped_value) = strip_wrapped_value(value, '\'', false) {
+        stripped_value.to_string();
+    };
+
+    value.to_string()
 }
 
 pub fn load() -> Result<(), std::io::Error> {
@@ -283,12 +279,29 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_parse_line_inline_comments_do work_double_quotes() {
-    //     let input = r#"API_KEY="beans" # deprecated actually dont use this"#;
-    //     assert_eq!(
-    //         parse_line(0, input),
-    //         Some(("API_KEY".into(), "beans".into()))
-    //     );
-    // }
+    #[test]
+    fn test_parse_inline_comments_double_quotes() {
+        let input = r#"API_KEY="beans" # deprecated actually dont use this"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans".into()))
+        );
+    }
+    #[test]
+    fn test_parse_inline_comments_within_double_quotes() {
+        let input = r#"API_KEY="beans #yeah " # deprecated actually dont use this"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans #yeah ".into()))
+        );
+    }
+
+    #[test]
+    fn test_parse_line_inline_comments_single_quotes() {
+        let input = r#"API_KEY='beans' # deprecated actually dont use this"#;
+        assert_eq!(
+            parse_line(0, input),
+            Some(("API_KEY".into(), "beans".into()))
+        );
+    }
 }
