@@ -103,11 +103,11 @@ fn normalize_value(value: &str) -> String {
     let value = value.trim();
 
     if let Some(stripped_value) = strip_wrapped_value(value, '"', true) {
-        unescape_chars(stripped_value);
+        return unescape_chars(stripped_value);
     };
 
     if let Some(stripped_value) = strip_wrapped_value(value, '\'', false) {
-        stripped_value.to_string();
+        return stripped_value.to_string();
     };
 
     value.to_string()
