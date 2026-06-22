@@ -20,7 +20,7 @@ fn main() {
 
 ```
 
-Alternatively, you can specify the relative path
+Alternatively, you can specify the relative path:
 
 ```rust
 use snv::load_from;
@@ -35,6 +35,6 @@ fn main() {
 ```
 
 ### Documentation
-- Double quotes are esscaped for `\n`, `\t`, `\r`, `\'`, `\\`
+- Double quotes escaped `\n`, `\t`, `\r`, `\'`, `\\`
 - Empty lines and comments are skipped
-- Single quotes are stripped but unescaped
+- Single quotes are unescaped and use the raw values
